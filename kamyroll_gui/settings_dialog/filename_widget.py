@@ -147,14 +147,14 @@ class FilenameWidget(QWidget):
             return
         self._logger.info("Selected File: %s", path)
 
-        output_path = Path(path)
-        if output_path.is_reserved():
+        download_path = Path(path)
+        if download_path.is_reserved():
             QMessageBox.information(self, "Directory is reserved",
                 "The directory you selected is unavailable, please select another one.")
             return
 
-        self.output_path = output_path
-        self.path_edit.setText(str(output_path))
+        self.settings.download_path = download_path
+        self.path_edit.setText(str(download_path))
 
     def is_valid(self, /):
         return not (self.episode_filename.toolTip()
