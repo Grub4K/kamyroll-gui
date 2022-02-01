@@ -63,6 +63,7 @@ class MainWidget(QWidget):
         layout.addWidget(self.add_item_button, 0, 1)
 
         self.remove_item_button = QPushButton("- Remove")
+        self.remove_item_button.setDisabled(True)
         self.remove_item_button.clicked.connect(self.remove_item)
         layout.addWidget(self.remove_item_button, 0, 2)
 
@@ -71,7 +72,6 @@ class MainWidget(QWidget):
             ABOUT_TEXT)
         about_button.clicked.connect(about_function)
         layout.addWidget(about_button, 5, 1, 1, 2)
-
 
         self.settings_button = QPushButton("Settings")
         self.settings_button.clicked.connect(self.create_settings)
@@ -84,6 +84,8 @@ class MainWidget(QWidget):
         self.download_button = QPushButton("Download All")
         self.download_button.clicked.connect(self.create_download_dialog)
         layout.addWidget(self.download_button, 9, 1, 1, 2)
+
+        self._set_button_states()
 
     def edit_item(self, item: QListWidgetItem, /):
         dialog = ValidatedUrlInputDialog(self, item.text())
@@ -107,11 +109,15 @@ class MainWidget(QWidget):
             self.list_widget.takeItem(row)
             del item
 
+        self._set_button_states()
+
     def add_item(self, /):
         dialog = ValidatedUrlInputDialog(self)
         if dialog.exec() == QDialog.Accepted:
             value = dialog.line_edit.text()
             self.list_widget.addItem(value)
+
+        self._set_button_states()
 
     def create_subtitle_download_dialog(self, /):
         if not manager.settings.subtitle_locales:
@@ -122,6 +128,11 @@ class MainWidget(QWidget):
 
     def create_download_dialog(self, /):
         self._real_create_download_dialog(False)
+
+    def _set_button_states(self, /):
+        disable_buttons = not self.list_widget.count()
+        self.download_button.setDisabled(disable_buttons)
+        self.download_subs_button.setDisabled(disable_buttons)
 
     def _real_create_download_dialog(self, subtitle_only, /):
         items = self._get_items()
@@ -139,7 +150,6 @@ class MainWidget(QWidget):
         for item in items_to_remove:
             row = self.list_widget.row(item)
             self.list_widget.takeItem(row)
-
 
     def _get_items(self, /):
         items = []
