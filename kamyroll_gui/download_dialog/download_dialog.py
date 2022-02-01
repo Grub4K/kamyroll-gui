@@ -97,7 +97,7 @@ class DownloadDialog(QDialog):
         self.ffmpeg_progress_label.setText("Querying api")
         current_item = self.links[self.position]
         self.progress_label.setText(TOTAL_BASE_FORMAT.format(
-            type=self.type_name, index=self.position, total=self.length))
+            type=self.type_name, index=self.position+1, total=self.length))
         self.overall_progress.setValue(self.position)
         self.position += 1
         parsed_data = api.parse_url(current_item)
@@ -186,9 +186,9 @@ class DownloadDialog(QDialog):
         return selection
 
     def ffmpeg_fail(self, /):
-        self.is_running = False
+        self.ffmpeg.stop()
         QMessageBox.critical(self, "Error - Kamyroll", "The download failed.")
-        self.reject()
+        self.safe_enqueue_next()
 
     def ffmpeg_success(self, /):
         self.success_count += 1
@@ -206,16 +206,18 @@ class DownloadDialog(QDialog):
         self.progress_label.setText(TOTAL_BASE_FORMAT.format(
             type=self.type_name, index=self.length, total=self.length))
         self.overall_progress.setValue(self.length)
+        self.ffmpeg_progress.setMaximum(1)
+        self.ffmpeg_progress.setValue(1)
         if self.success_count:
-            QMessageBox.information(self, "Success - Kamyroll", "The download succeeded.")
+            QMessageBox.information(self, "Info - Kamyroll", "The download is finished.")
         else:
-            QMessageBox.information(self, "Info - Kamyroll", "No items were downloaded")
+            QMessageBox.information(self, "Info - Kamyroll", "No items were downloaded.")
 
     def reject(self):
         if not self.is_running:
             self.halt_execution = True
             self.ffmpeg.stop()
-            return super().reject()
+            return super().accept()
 
         response = QMessageBox.question(self, "Terminate download? - Kamyroll",
             "A Download is in progress. Exiting now will terminate the download progess.\n\nAre you sure you want to quit?")
