@@ -61,7 +61,7 @@ class VideoWidget(QWidget):
 
         self.video_height = QComboBox()
         for resolution in Resolution:
-            self.video_height.addItem(f"{resolution}p", resolution)
+            self.video_height.addItem(f"{resolution}p", resolution.value)
         self.video_width_label = QLabel("Maximum Resolution:")
         self.video_width_label.setBuddy(self.video_height)
         layout.addWidget(self.video_width_label)
@@ -71,7 +71,7 @@ class VideoWidget(QWidget):
         self.audio_locale.setCurrentIndex(selected_audio_index)
         selected_hardsub_index = self.hardsub_locale.findData(settings.hardsub_locale)
         self.hardsub_locale.setCurrentIndex(selected_hardsub_index)
-        selected_resolution_index = self.video_height.findData(settings.video_height)
+        selected_resolution_index = self.video_height.findData(settings.video_height.value)
         self.video_height.setCurrentIndex(selected_resolution_index)
 
         self.set_audio_locale()
@@ -157,7 +157,7 @@ class VideoWidget(QWidget):
 
         current_width = self.video_height.currentData()
         self.video_height.clear()
-        for resolution in all_resolutions:
+        for resolution in sorted(all_resolutions, reverse=True):
             self.video_height.addItem(f"{resolution}p", resolution)
         current_width_index = self.video_height.findData(current_width)
         self._logger.debug("Using resolution index %s, current_width is %s",
