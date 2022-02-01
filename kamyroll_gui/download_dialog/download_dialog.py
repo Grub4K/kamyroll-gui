@@ -54,7 +54,7 @@ class DownloadDialog(QDialog):
         self.is_running = False
         self.strict = strict
         self.ask_login = self.settings.use_own_credentials
-        self.success_count = 0
+        self.successful_items = []
 
         layout = QVBoxLayout()
         self.setLayout(layout)
@@ -99,7 +99,6 @@ class DownloadDialog(QDialog):
         self.progress_label.setText(TOTAL_BASE_FORMAT.format(
             type=self.type_name, index=self.position+1, total=self.length))
         self.overall_progress.setValue(self.position)
-        self.position += 1
         parsed_data = api.parse_url(current_item)
         if parsed_data is None:
             raise ValueError("Somehow the url is not a valid one")
@@ -191,12 +190,14 @@ class DownloadDialog(QDialog):
         self.safe_enqueue_next()
 
     def ffmpeg_success(self, /):
-        self.success_count += 1
+        self.successful_items.append(self.position)
         self.safe_enqueue_next()
 
     def safe_enqueue_next(self, /):
         if self.halt_execution:
             return
+
+        self.position += 1
 
         if self.position < self.length:
             QTimer.singleShot(0, self.enqueue_next_download)
@@ -208,7 +209,7 @@ class DownloadDialog(QDialog):
         self.overall_progress.setValue(self.length)
         self.ffmpeg_progress.setMaximum(1)
         self.ffmpeg_progress.setValue(1)
-        if self.success_count:
+        if self.successful_items:
             QMessageBox.information(self, "Info - Kamyroll", "The download is finished.")
         else:
             QMessageBox.information(self, "Info - Kamyroll", "No items were downloaded.")

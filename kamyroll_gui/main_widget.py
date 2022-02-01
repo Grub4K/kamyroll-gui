@@ -118,20 +118,28 @@ class MainWidget(QWidget):
             QMessageBox.information(self, "Info - Kamyroll",
                 "No subtitles are selected.\nSelect subtitles in the settings and try again.")
             return
+        self._real_create_download_dialog(True)
+
+    def create_download_dialog(self, /):
+        self._real_create_download_dialog(False)
+
+    def _real_create_download_dialog(self, subtitle_only, /):
         items = self._get_items()
-        dialog = DownloadDialog(self, items, subtitle_only=True)
+        dialog = DownloadDialog(self, items, subtitle_only=subtitle_only)
         if dialog.exec() == QDialog.Accepted:
             self._logger.info("Finished downloading sequence")
         else:
             self._logger.error("Failed download")
 
-    def create_download_dialog(self, /):
-        items = self._get_items()
-        dialog = DownloadDialog(self, items)
-        if dialog.exec() == QDialog.Accepted:
-            self._logger.info("Finished downloading sequence")
-        else:
-            self._logger.error("Failed download")
+        items_to_remove = [
+            self.list_widget.item(row)
+            for row in dialog.successful_items
+        ]
+        self._logger.debug("Removing %s (%s)", dialog.successful_items, items_to_remove)
+        for item in items_to_remove:
+            row = self.list_widget.row(item)
+            self.list_widget.takeItem(row)
+
 
     def _get_items(self, /):
         items = []
