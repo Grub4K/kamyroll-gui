@@ -18,12 +18,14 @@ def get_arguments(settings, selection, metadata, images, subtitles_only, /):
     arguments = _get_input_args(selection, subtitles_only)
 
     if not subtitles_only:
+        image_mapping_args = []
         if settings.write_metadata:
             poster = images.get("poster_tall")
             if poster is not None:
                 position = len(arguments) // 2
-                arguments += _attach_image(poster, position,
-                    settings.separate_subtitles)
+                image_input_args, image_mapping_args = _get_image_args(
+                    poster, position, settings.separate_subtitles)
+                arguments += image_input_args
 
         if not settings.compress_streams:
             arguments.extend(["-c:a", "copy", "-c:v", "copy"])
@@ -34,6 +36,8 @@ def get_arguments(settings, selection, metadata, images, subtitles_only, /):
         arguments += _get_video_mapping_args(selection)
         if not settings.separate_subtitles:
             arguments += _get_subtitle_mapping_args(selection)
+        if settings.write_metadata:
+            arguments += image_mapping_args
 
         arguments.append(str(output_path))
 
@@ -144,21 +148,28 @@ def _get_metadata_args(download_selection, metadata, /):
 
     return arguments
 
-# FIXME: picture workaround
-def _attach_image(image, position, is_mp4):
+def _get_image_args(image, position, is_mp4):
+    filename = _get_temp_image_file(image)
     if is_mp4:
-        return []
-        return [
-            "-i", file.name,
+        return ([
+            "-i", filename
+        ], [
             "-map", str(position),
-            f'-disposition:v:{position}', 'attached_pic',
-        ]
+            # "-c:v:1", "mjpeg",
+            f"-disposition:v:1", "attached_pic",
+        ])
 
+    return ([
+    ], [
+        "-attach", filename,
+        "-metadata:s:t", "mimetype=image/jpeg",
+    ])
+
+def _get_temp_image_file(image):
     data = web_manager.get(image)
-    with tempfile.NamedTemporaryFile("wb", delete=False) as file:
+    with tempfile.NamedTemporaryFile("wb", prefix="kamyroll_",
+            suffix=".jpeg", delete=False) as file:
         _logger.debug("Created tempfile: %s", file.name)
         file.write(data)
-        return [
-            "-attach", file.name,
-            "-metadata:s:t", "mimetype=image/jpeg",
-        ]
+
+    return file.name
