@@ -8,48 +8,12 @@ from PySide6.QtWidgets import QMessageBox
 
 
 
-re_hex = r"[\da-fA-F]"
-re_float = r"-?\d*(?:\.\d+)?"
-re_time = r"-?\d+:\d+:\d+\.\d+"
-
-TIME_REGEX = re.compile(r"(?P<hours>-?\d+?):(?P<minutes>-?\d+?):(?P<seconds>-?\d+?\.\d+?)?")
-PROGRESS_REGEX = re.compile((r""
-    + r"(?:"
-        + r"(?:"
-            # Current frame position
-            + r"frame=\s*?(?P<frame>\d+) "
-            # fps getting encoded (not fps of the video)
-            + r"fps=\s*?(?P<fps>{float}) "
-        + r")?"
-        # Stream quality for current timespan
-        + r"q=\s*?(?P<q>{float}) "
-    + r")?"
-    # Indicator for last progress update
-    + r"(?P<last>L)?"
-    # quantization parameter histogram as concated hex ints
-    + r"(?P<qp_history>{hex}+)?"
-    # peak signal to noise ratio
-    + r"(?:PSNR="
-        + r"Y:(?P<psnr_y>{float}) "
-        + r"U:(?P<psnr_u>{float}) "
-        + r"V:(?P<psnr_v>{float}) "
-        + r"*:(?P<psnr_all>{float}) "
-    + r")?"
+PROGRESS_REGEX = re.compile(r""
     # output file size
-    + r"size=(?:(?:N/A)|(?:\s*?(?P<size>{float})kB)) "
+    + r"size=(?:(?:N/A)|(?:\s*?(?P<size>-?\d+)kB)) "
     # output file length as time
-    + r"time=(?:(?:N/A)|(?:\s*?(?P<time>{time}))) "
-    # output bitrate
-    + r"bitrate=(?:(?:N/A)|(?:\s*?(?P<bitrate>{float})kbits/s))"
-    + r"(?:"
-        # duplicate frames
-        + r" dup=(?P<dup>\d+)"
-        # dropped frames
-        + r" drop=(?P<drop>\d+)"
-    + r")?"
-    # encoding speed ratio (encoding / realtime)
-    + r" speed=(?:(?:N/A)|(?:\s*?(?P<speed>[^x]+)x))"
-).format(time=re_time, hex=re_hex, float=re_float))
+    + r"time=(?:(?:N/A)|(?:(?P<hours>-?\d+):(?P<minutes>\d+):(?P<seconds>\d+\.\d+))) "
+)
 
 
 class FFmpeg:
@@ -118,7 +82,8 @@ class FFmpeg:
             for line in map(bytes.decode, split_chunk):
                 if not line:
                     continue
-                self.text_edit.append(line)
+                self.text_edit.insertPlainText(line)
+                self.text_edit.insertPlainText("\n")
                 self._process_line(line)
         else:
             self.leftover_bytes += chunk
@@ -133,9 +98,9 @@ class FFmpeg:
     def ask_question(self, question, /):
         reply = QMessageBox.question(self.parent,
             "Question - FFmpeg - Kamyroll", question)
-        response = "y" if reply == QMessageBox.Yes else "n"
+        response = "y\n" if reply == QMessageBox.Yes else "n\n"
         self.text_edit.insertPlainText(response)
-        self.process.write(response.encode() + b'\n')
+        self.process.write(response.encode())
 
     def _process_line(self, line, /):
         if self.is_stopped:
@@ -162,10 +127,13 @@ class FFmpeg:
             self.fail_callback()
             return
 
-        match = PROGRESS_REGEX.match(line)
+        match = PROGRESS_REGEX.search(line)
         if match:
             try:
-                parsed_time = _parse_ffmpeg_time(match["time"])
+                hours = int(match["hours"])
+                minutes = int(match["minutes"])
+                seconds = float(match["seconds"])
+                parsed_time = timedelta(hours=hours, minutes=minutes, seconds=seconds)
             except ValueError:
                 return
             if self.first_update:
@@ -194,15 +162,3 @@ class FFmpeg:
         self.progress.setValue(1)
         self._logger.info("FFmpeg process exited successfully (%s)", exit_code)
         self.success_callback()
-
-
-def _parse_ffmpeg_time(time: str):
-    match = TIME_REGEX.fullmatch(time)
-    if not match:
-        raise ValueError("Unknown time format")
-
-    hours = int(match["hours"])
-    minutes = int(match["minutes"])
-    seconds = float(match["seconds"])
-
-    return timedelta(hours=hours, minutes=minutes, seconds=seconds)
