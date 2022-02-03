@@ -306,9 +306,4 @@ def _subtitle_from_response_dict(data, /):
         _logger.error("Error parsing subtitle: %s", error)
         return None
 
-    # Delete closed captions
-    if "CC." in url:
-        _logger.warning("Removed subtitle %s, Closed Caption", locale)
-        return None
-
     return Subtitle(locale=locale, url=url, format=sub_format)
