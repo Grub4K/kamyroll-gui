@@ -19,6 +19,7 @@ from .download_dialog import DownloadDialog
 from .validated_url_input_dialog import ValidatedUrlInputDialog
 from .settings import manager
 from .utils import api
+from .utils.loading_overlay import LoadingOverlay
 
 
 CONFIG_UPDATE_TIME = 15 * 60 * 1000
@@ -38,6 +39,7 @@ class MainWidget(QWidget):
         self.setMinimumSize(700, 500)
 
         self.url_correct = False
+        self.first_time = True
 
         layout = QGridLayout()
         self.setLayout(layout)
@@ -89,11 +91,19 @@ class MainWidget(QWidget):
 
         self._set_button_states()
 
+        self.loading_overlay = LoadingOverlay(self, dot_count=8)
+        layout.setAlignment(self.loading_overlay, Qt.AlignCenter)
+
         QTimer.singleShot(0, self.get_config)
         self.startTimer(CONFIG_UPDATE_TIME)
 
     def get_config(self, /):
+        if self.first_time:
+            self.loading_overlay.show()
         api.get_config()
+        if self.first_time:
+            self.first_time = False
+            self.loading_overlay.hide()
 
     def edit_item(self, item: QListWidgetItem, /):
         dialog = ValidatedUrlInputDialog(self, item.text())
@@ -168,3 +178,7 @@ class MainWidget(QWidget):
 
     def timerEvent(self, _, /):
         self.get_config()
+
+    def resizeEvent(self, event, /):
+        self.loading_overlay.resize(event.size())
+        event.accept()
