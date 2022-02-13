@@ -1,7 +1,7 @@
 from functools import partial
 import logging
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QTimer, Qt
 
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -18,8 +18,10 @@ from .settings_dialog import SettingsDialog
 from .download_dialog import DownloadDialog
 from .validated_url_input_dialog import ValidatedUrlInputDialog
 from .settings import manager
+from .utils import api
 
 
+CONFIG_UPDATE_TIME = 15 * 60 * 1000
 ABOUT_TEXT = """
 Kamyroll is written in Python 3 using PySide (Qt)<br>
 and was developed by <a href="https://github.com/Grub4K">Grub4K</a><br>
@@ -86,6 +88,12 @@ class MainWidget(QWidget):
         layout.addWidget(self.download_button, 9, 1, 1, 2)
 
         self._set_button_states()
+
+        QTimer.singleShot(0, self.get_config)
+        self.startTimer(CONFIG_UPDATE_TIME)
+
+    def get_config(self, /):
+        api.get_config()
 
     def edit_item(self, item: QListWidgetItem, /):
         dialog = ValidatedUrlInputDialog(self, item.text())
@@ -157,3 +165,6 @@ class MainWidget(QWidget):
             item = self.list_widget.item(row).text()
             items.append(item)
         return items
+
+    def timerEvent(self, _, /):
+        self.get_config()

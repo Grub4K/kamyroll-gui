@@ -1,32 +1,18 @@
-import re
 import json
 import logging
 
-from datetime import datetime, timedelta
 
+from . import json_helper
 from .web_manager import web_manager
 from .blocking import wait
 from ..data_types import (
-    Channel,
-    EpisodeMetadata,
-    Locale,
-    Stream,
-    Subtitle,
-    StreamType,
+    ConfigResponse,
     StreamResponse,
-    StreamResponseType,
-    MovieMetadata,
 )
 
 
 
 BASE_URL = "https://kamyroll-server.herokuapp.com"
-
-REGEXES = [
-    ("crunchyroll", re.compile(r"https://beta\.crunchyroll\.com/(?:[a-z]{2,}/)?watch/(?P<id>[A-Z0-9]+)/")),
-    ("funimation", re.compile(r"https://www\.funimation\.com/v/(?P<slug_show>[a-z\-]+)/(?P<slug_episode>[a-z\-]+)")),
-    ("adn", re.compile(r"https://animedigitalnetwork\.fr/video/[^/]+/(?P<id>[0-9]+)-")),
-]
 
 
 _logger = logging.getLogger(__name__)
@@ -37,14 +23,23 @@ class ApiError(Exception):
 
 
 def parse_url(url):
-    for name, regexp in REGEXES:
-        match = regexp.match(url)
+    for service in config.services:
+        if not service.active:
+            continue
+
+        match = service.regex.match(url)
         if not match:
             continue
 
-        return name, match.groupdict()
+        return service.id, match.groupdict()
     return None
 
+def get_config():
+    global config
+
+    data = call_api("/v2/config")
+    config = json_helper.load(data, ConfigResponse)
+    _logger.info("Loaded config: %s", config)
 
 def get_media(name, params, /, username=None, password=None, retries=3):
     use_login = username and password
@@ -61,7 +56,7 @@ def get_media(name, params, /, username=None, password=None, retries=3):
     else:
         use_bypass = True
 
-    if retries <= 1:
+    if retries < 1:
         retries = 1
     data = {}
     for _ in range(retries):
@@ -77,7 +72,7 @@ def get_media(name, params, /, username=None, password=None, retries=3):
                 use_bypass = return_val
             continue
         try:
-            return _stream_response_from_response_dict(data)
+            return json_helper.load(data, StreamResponse)
         except Exception as error:
             message = f"Unknown error while parsing response: {error}"
             raise ApiError(message)
@@ -119,8 +114,6 @@ def _handle_error(code, message, use_login, channel_id):
             message += "\nConsider using the premium bypass"
             raise ApiError(message)
 
-        if channel_id == "funimation":
-            return False
         # this should only ever happen if
         # the api backend user runs out of premium
         raise ApiError("Unexpected bypass error, try again later")
@@ -140,170 +133,4 @@ def _handle_error(code, message, use_login, channel_id):
     wait(1000)
     return
 
-
-def _stream_response_from_response_dict(data, /):
-    try:
-        response_type_str = data["type"]
-        channel_id = data["channel_id"]
-        stream_dicts = data["streams"]
-        subtitle_dicts = data["subtitles"]
-        images_dict = data["images"]
-    except KeyError as error:
-        message = f"Key {error} missing in response json"
-        raise ApiError(message) from None
-
-    try:
-        response_type = StreamResponseType(response_type_str)
-    except ValueError as error:
-        message = f"Unknown stream response type: {error}"
-        raise ApiError(message) from None
-
-    try:
-        channel = Channel(channel_id)
-    except ValueError as error:
-        message = f"Unknown channel: {error}"
-        raise ApiError(message) from None
-
-    metadata = None
-    if response_type is StreamResponseType.EPISODE:
-        metadata = _episode_metadata_from_response_dict(data)
-    elif response_type is StreamResponseType.MOVIE:
-        metadata = _movie_metadata_from_response_dict(data)
-    if metadata is None:
-        raise ApiError("Error parsing metadata")
-
-    images = _pictures_from_response_dict(images_dict)
-
-    streams: list[Stream] = []
-    for stream_dict in stream_dicts:
-        stream = _stream_from_response_dict(stream_dict)
-        if stream is not None:
-            streams.append(stream)
-
-    subtitles = []
-    for subtitle_dict in subtitle_dicts:
-        subtitle = _subtitle_from_response_dict(subtitle_dict)
-        if subtitle is not None:
-            subtitles.append(subtitle)
-
-    return StreamResponse(type=response_type, images=images, metadata=metadata,
-        channel=channel, streams=streams, subtitles=subtitles)
-
-
-def _pictures_from_response_dict(data):
-    parsed_data = {}
-
-    for name, value in data.items():
-        if value:
-            url = value[-1].get("source")
-            if url:
-                parsed_data[name] = url
-
-    return parsed_data
-
-
-def _episode_metadata_from_response_dict(data, /):
-    try:
-        series_meta = data["parent_metadata"]
-        episode_meta = data["episode_metadata"]
-        series = series_meta["title"]
-        season = episode_meta["season_number"]
-        season_name = episode_meta["season_title"]
-        episode = episode_meta["episode_number"]
-        episode_disp = episode_meta["episode"]
-        title = episode_meta["title"]
-        duration_ms = episode_meta["duration_ms"]
-        description = episode_meta["description"]
-        air_date: str = episode_meta["episode_air_date"]
-    except KeyError as error:
-        _logger.error("Error parsing metadata: Key %s does not exist in json", error)
-        return None
-
-    duration = timedelta(milliseconds=duration_ms)
-    if air_date.endswith("Z"):
-        air_date = air_date.removesuffix("Z")
-    release_date = datetime.fromisoformat(air_date)
-
-    return EpisodeMetadata(title=title, description=description,
-        duration=duration, series=series,
-        season=season, season_name=season_name,
-        episode=episode, episode_disp=episode_disp,
-        date=release_date, year=release_date.year)
-
-
-def _movie_metadata_from_response_dict(data, /):
-    try:
-        movie_meta = data["movie_metadata"]
-        title = movie_meta["title"]
-        duration_ms = movie_meta["duration_ms"]
-        description = movie_meta["description"]
-        year = movie_meta["movie_release_year"]
-    except KeyError as error:
-        _logger.error("Error parsing metadata: Key %s does not exist in json", error)
-        return None
-
-    duration = timedelta(milliseconds=duration_ms)
-
-    return MovieMetadata(title=title, description=description,
-        duration=duration, year=year)
-
-
-def _stream_from_response_dict(data, /):
-    try:
-        stream_type_str = data["type"]
-        audio_locale_str = data["audio_locale"]
-        hardsub_locale_str = data["hardsub_locale"]
-        url = data["url"]
-    except KeyError as error:
-        _logger.error("Error parsing stream: Key %s does not exist in json", error)
-        return None
-
-    try:
-        audio_locale = Locale(audio_locale_str)
-    except ValueError as error:
-        _logger.error("Error parsing stream: audio locale: %s", error)
-        return None
-
-    try:
-        hardsub_locale = Locale(hardsub_locale_str)
-    except ValueError as error:
-        _logger.error("Error parsing stream: hardsub locale: %s", error)
-        return None
-
-    suffix = None
-    try:
-        stream_type = StreamType(stream_type_str)
-    except ValueError as error:
-        _logger.error("Error parsing stream: %s", error)
-        return None
-
-    if stream_type_str.startswith("simulcast"):
-        suffix = " (Simulcast)"
-        stream_type_str = stream_type_str.removeprefix("simulcast_")
-    elif stream_type_str.startswith("uncut"):
-        suffix = " (Uncut)"
-        stream_type_str = stream_type_str.removeprefix("uncut_")
-
-    type_name = str(stream_type)
-    if suffix:
-        type_name += suffix
-
-    return Stream(type=stream_type, type_name=type_name,
-        audio_locale=audio_locale, hardsub_locale=hardsub_locale, url=url)
-
-def _subtitle_from_response_dict(data, /):
-    try:
-        locale_str = data["locale"]
-        url = data["url"]
-        sub_format = data["format"]
-    except KeyError as error:
-        _logger.error("Error parsing subtitle: %s", error)
-        return None
-
-    try:
-        locale = Locale(locale_str)
-    except ValueError as error:
-        _logger.error("Error parsing subtitle: %s", error)
-        return None
-
-    return Subtitle(locale=locale, url=url, format=sub_format)
+config = None
