@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from .channel import Channel
+from .image_set import ImageSet
 from .stream import Stream
 from .subtitle import Subtitle
 from .metadata import Metadata
@@ -16,8 +16,8 @@ class StreamResponseType(Enum):
 @dataclass
 class StreamResponse:
     type: StreamResponseType
-    channel: Channel
+    channel_id: str
     metadata: Metadata
-    images: dict[str, str]
+    images: dict[str, ImageSet]
     streams: list[Stream]
     subtitles: list[Subtitle]

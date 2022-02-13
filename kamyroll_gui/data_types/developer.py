@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class Locale:
+class Developer:
     name: str
-    bcp_47: str
-    iso_639_2: str
+    profile_picture: str
+    github: str
