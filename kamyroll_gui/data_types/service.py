@@ -11,3 +11,4 @@ class Service:
     regex: re.Pattern
     active: bool
     bypass: bool
+    website: str

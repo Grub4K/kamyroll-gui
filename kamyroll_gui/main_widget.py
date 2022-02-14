@@ -75,6 +75,10 @@ class MainWidget(QWidget):
         about_function = partial(QMessageBox.about, self, "About - Kamyroll",
             ABOUT_TEXT)
         about_button.clicked.connect(about_function)
+        layout.addWidget(about_button, 4, 1, 1, 2)
+
+        about_button = QPushButton("API Info")
+        about_button.clicked.connect(self.show_api_info)
         layout.addWidget(about_button, 5, 1, 1, 2)
 
         self.settings_button = QPushButton("Settings")
@@ -96,6 +100,25 @@ class MainWidget(QWidget):
 
         QTimer.singleShot(0, self.get_config)
         self.startTimer(CONFIG_UPDATE_TIME)
+
+    def show_api_info(self, /):
+        text_data = []
+
+        text_data.append("These services are currently available:<ul>")
+        for service in api.config.services:
+            if not service.active:
+                continue
+            text_data.append(f"<li><a href='{service.website}'>{service.name}</a></li>")
+        text_data.append("</ul><br>")
+
+        text_data.append("Api developed by:<ul>")
+        for developer in api.config.developers:
+            text_data.append(f"<li><a href='{developer.github}'>{developer.name}</a></li>")
+        text_data.append("</ul><br>")
+
+        text_data.append(f"<br>Api last updated {api.config.updated}")
+
+        QMessageBox.information(self, "API Info - Kamyroll", "".join(text_data))
 
     def get_config(self, /):
         if self.first_time:
