@@ -114,30 +114,30 @@ def call_api(path, /, params=None):
 
 def _handle_error(code, message, use_login, channel_id):
     _logger.error("Api returned error code %s: %s", code, message)
-    if code == "premium_only":
-        if use_login:
-            message += "\nConsider using the premium bypass"
-            raise ApiError(message)
 
-        if channel_id == "funimation":
-            return False
-        # this should only ever happen if
-        # the api backend user runs out of premium
-        raise ApiError("Unexpected bypass error, try again later")
+    match code:
+        case "premium_only":
+            if use_login:
+                message += "\nConsider using the premium bypass"
+                raise ApiError(message)
 
-    if code == "bad_player_connection":
-        wait(2000)
-        return
+            if channel_id == "funimation":
+                return False
+            # this should only ever happen if
+            # the api backend user runs out of premium
+            raise ApiError("Unexpected bypass error, try again later")
 
-    if code == "bad_initialize":
-        wait(2000)
-        return
+        case "bad_player_connection":
+            wait(2000)
 
-    if code in ["unknown_id"]:
-        raise ApiError("The provided id of the url is not valid")
+        case "bad_initialize":
+            wait(2000)
 
+        case "unknown_id":
+            raise ApiError("The provided id of the url is not valid")
 
-    wait(1000)
+        case _:
+            wait(1000)
     return
 
 

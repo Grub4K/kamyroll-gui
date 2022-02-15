@@ -128,3 +128,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 pyrightconfig.json
+
+/settings.json
+tempCodeRunnerFile.py
