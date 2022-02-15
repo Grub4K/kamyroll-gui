@@ -55,7 +55,7 @@ In addition, for an episode these values are available:
 - `season_name`: The name of the season
 - `episode`: The number of the episode
 - `episode_disp`: A string value representing the number
-  - For something like specials it might show `Special 1`
+    - For something like specials it might show `Special 1`
 - `date`: The release date
 
 ### Write separate subtitle files

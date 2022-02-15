@@ -53,7 +53,7 @@ def get_media(name, params, /, username=None, password=None, retries=3):
 
     params["channel_id"] = name
 
-    if name == "adn":
+    if name=="adn":
         params["country"] = "fr"
 
     if use_login:
@@ -113,8 +113,6 @@ def call_api(path, /, params=None):
     return json_data
 
 
-error_codes = Enum("premium_only", "bad_player_connection", "bad_initialize")
-
 def _handle_error(code, message, use_login, channel_id):
     _logger.error("Api returned error code %s: %s", code, message)
 
@@ -132,17 +130,16 @@ def _handle_error(code, message, use_login, channel_id):
 
         case "bad_player_connection":
             wait(2000)
-            return
 
         case "bad_initialize":
             wait(2000)
-            return
+
+        # this is the same as `if code in ["unknown_id"]: ...`
+        case x if x in ["unknown_id"]:
+            raise ApiError("The provided id of the url is not valid")
 
         case _:
-            raise ApiError(f"Error: {code}. The provided id of the url is not valid")
-
-
-    wait(1000)
+            wait(1000)
     return
 
 

@@ -12,16 +12,15 @@ def main():
 
     from kamyroll_gui.main_widget import MainWidget
 
+
+
     filename = datetime.now().strftime("logs/kamyroll_%Y-%m-%d_%H-%M-%S.log")
     logfile = Path(filename)
     logfile.parent.mkdir(exist_ok=True)
 
-    logging.basicConfig(
-        level=logging.DEBUG,
-        style='{',
+    logging.basicConfig(level=logging.DEBUG, style='{',
         format='{asctime} | {name:<90} | {levelname:<8} | {message}',
-        filename=str(logfile),
-        filemode='w')
+        filename=str(logfile), filemode='w')
 
     logger = logging.getLogger(__name__)
 

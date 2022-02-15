@@ -129,6 +129,5 @@ dmypy.json
 .pyre/
 pyrightconfig.json
 
-settings.json
-!.vscode/settings.json
+/settings.json
 tempCodeRunnerFile.py
