@@ -133,8 +133,7 @@ def _handle_error(code, message, use_login, channel_id):
         case "bad_initialize":
             wait(2000)
 
-        # this is the same as `if code in ["unknown_id"]: ...`
-        case x if x in ["unknown_id"]:
+        case "unknown_id":
             raise ApiError("The provided id of the url is not valid")
 
         case _:
