@@ -7,7 +7,7 @@ A GUI frontend for the Kamyroll-API using Python and PySide6
 ## Usage
 
 When starting the application you will be presented with a list and some buttons on the right.
-If you are starting it for the first time it will setup some default settings.
+If you are starting it for the first time it will set up some default settings.
 You can change them by clicking the `Settings` button and changing the values there.
 
 After you are done with settings, you can add links by clicking the `+ Add` button.
@@ -16,10 +16,11 @@ If the link is supported it will show a green message.
 Click `OK` to add the link to the list.
 
 After adding all your links you can click:
+
 - The `Download Subtitles` to only download subtitles
 - The `Download All` button to download
 
-While the download window is actuve you might get prompted for alternative settings
+While the download window is active you might get prompted for alternative settings
 or if a file should be overwritten.
 
 After the download is finished, there will be a popup.
@@ -34,31 +35,34 @@ Click the `Browse` button to change the parameter.
 
 The settings menu has two fields where a "filename format" is accepted,
 `Episode filename format` and `Movie fiename format`
-These use python string formatting, everything inside of curly braces (`{}`)
+These use python string formatting, everything inside curly braces (`{}`)
 will be replaced with a value, if it is supported.
 For example `{series} - {episode}` will become `One Piece - 1`.
 Use `{{` and `}}` if you want to use `{` or `}` literally.
 For more information read the [Python documentation](https://docs.python.org/3/library/string.html#format-string-syntax).
 
 These values are available for formatting:
+
 - `title`: The title of the media
 - `duration`: The duration of the video in milliseconds
 - `description`: A description
 - `year`: The release year
 
-In addition for an episode these values are available:
+In addition, for an episode these values are available:
+
 - `series`: The series the episode is from
 - `season`: The number of the season
 - `season_name`: The name of the season
 - `episode`: The number of the episode
 - `episode_disp`: A string value representing the number
-    - For something like specials it might show `Special 1`
+  - For something like specials it might show `Special 1`
 - `date`: The release date
 
 ### Write separate subtitle files
+
 This option will enable you to write a `.mp4` file and many `.ass` files
 instead of a single `.mkv` file.
-To help structuring it clearly, there is also a field called `Subtitle prefix`.
+To help structure it clearly, there is also a field called `Subtitle prefix`.
 If used the file will be prefixed with that name.
 
 If the movie file was `One Piece/One Piece - 01.mp4`
@@ -78,13 +82,13 @@ Checking this will slow down the download.
 
 ### Use own login credentials
 
-If you dont want to use the bypasses available
+If you don't want to use the bypasses available
 you can also provide your own login data.
 If this is checked it will prompt you for
 your email and password on download.
 
 ### Use strict matching
 
-Sometimes some of the subtitles or resolutions might not be available.
-If you dont check this box subtitles that are not available will be ignored and
-if a resolution is not avaiable it will automatically select a lower resolution.
+Sometimes some subtitles or resolutions might not be available.
+If you don't check this box subtitles that are not available will be ignored and
+if a resolution is not available it will automatically select a lower resolution.
